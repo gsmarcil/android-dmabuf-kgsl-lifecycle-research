@@ -1,0 +1,145 @@
+# results/confirmed_outputs.txt
+
+```text id="z6j4q0"
+============================================================
+ANDROID DMA-BUF / KGSL LIFECYCLE RESEARCH
+CONFIRMED TEST OUTPUTS (REAL SESSION RESULTS)
+============================================================
+
+Device Snapshot:
+- Android 16 device tested
+- SELinux enforcing
+- Production environment
+- /proc enumeration used
+
+------------------------------------------------------------
+[1] DMA-BUF USERS DISCOVERED
+------------------------------------------------------------
+
+PID 2221 | u:r:platform_app:s0:c512,c768
+Process: com.android.systemui
+DMA-BUF fds: 50
+
+PID 2897 | u:r:platform_app:s0:c512,c768
+Process: com.android.launcher
+DMA-BUF fds: 144
+
+PID 4689 | u:r:untrusted_app:s0:c184,c256,c512,c768
+Process: com.coloros.smartsidebar:edgepanel
+DMA-BUF fds: 8
+
+PID 5062 | u:r:priv_app:s0:c512,c768
+Process: com.google.android.googlequicksearchbox:googleapp
+DMA-BUF fds: 10
+
+Finding:
+Applications in multiple SELinux domains actively hold DMA-BUF handles.
+
+------------------------------------------------------------
+[2] SMARTSIDEBAR LIVE SPAWN TEST
+------------------------------------------------------------
+
+Starting:
+Intent { cmp=com.coloros.smartsidebar/.EdgePanelActivity }
+
+smartsidebar PID: 28572 | DMA-BUF fds: 0
+smartsidebar PID: 28576 | DMA-BUF fds: 0
+smartsidebar PID: 28582 | DMA-BUF fds: 0
+smartsidebar PID: 28878 | DMA-BUF fds: 8
+
+Finding:
+DMA-BUF handles appear dynamically when UI component becomes active.
+
+------------------------------------------------------------
+[3] ACTIVE DMA-BUF OBJECTS OBSERVED
+------------------------------------------------------------
+
+/proc/<pid>/fd links:
+
+132 -> /dmabuf:dmabuf6776
+134 -> /dmabuf:dmabuf6772
+135 -> /dmabuf:dmabuf6773
+136 -> /dmabuf:dmabuf6774
+137 -> /dmabuf:dmabuf6775
+139 -> /dmabuf:dmabuf6777
+140 -> /dmabuf:dmabuf6778
+141 -> /dmabuf:dmabuf6779
+
+Finding:
+Real DMA-BUF kernel objects exposed through file descriptors.
+
+------------------------------------------------------------
+[4] SURFACEFLINGER SHARING MATRIX
+------------------------------------------------------------
+
+SurfaceFlinger PID: 660
+
+SHARED:
+PID 2221 | platform_app | 92 inodes | com.android.systemui
+PID 28878 | untrusted_app | 68 inodes | com.coloros.smartsidebar:edgepanel
+PID 2897 | platform_app | 58 inodes | com.android.launcher
+PID 5062 | priv_app | 58 inodes | com.google.android.googlequicksearchbox
+PID 7724 | untrusted_app | 74 inodes | com.google.android.inputmethod.latin
+PID 8759 | untrusted_app | 58 inodes | com.arjanvlek.oxygenupdater
+
+Finding:
+SurfaceFlinger concurrently shares DMA-BUF references with trusted
+and untrusted applications during normal operation.
+
+------------------------------------------------------------
+[5] CLIENT DEATH LIFECYCLE TEST
+------------------------------------------------------------
+
+App:
+com.android.chrome:privileged_process0
+
+Shared inodes before kill: 68
+SurfaceFlinger retained after app death: 68
+
+VERDICT:
+SurfaceFlinger RETAINS DMA-BUFs after client death.
+Buffers can outlive client process lifecycle.
+
+------------------------------------------------------------
+[6] SURFACEFLINGER DEATH TEST
+------------------------------------------------------------
+
+App tested:
+com.openai.chatgpt
+
+Shared inodes before SurfaceFlinger death: 58
+App DMA-BUF fds before: 4
+App DMA-BUF fds 0.5s after SurfaceFlinger death: 0
+
+Application process still alive: yes
+
+VERDICT:
+Dependent application lost DMA-BUF descriptors after producer death.
+
+------------------------------------------------------------
+[7] ARCHITECTURAL OBSERVATIONS
+------------------------------------------------------------
+
+1. DMA-BUF sharing is normal production behavior.
+2. Shared ownership spans multiple SELinux domains.
+3. Cleanup behavior is asymmetric.
+4. Client death does not always destroy shared buffers immediately.
+5. Producer/service death can revoke dependent handles.
+
+------------------------------------------------------------
+[8] SECURITY INTERPRETATION
+------------------------------------------------------------
+
+These findings indicate lifecycle and ownership complexity inside
+Android graphics memory handling.
+
+This output does NOT claim:
+- privilege escalation
+- SELinux bypass
+- sandbox escape
+- universal vulnerability
+
+------------------------------------------------------------
+END OF CONFIRMED RESULTS
+------------------------------------------------------------
+```
