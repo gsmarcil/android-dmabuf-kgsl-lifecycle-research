@@ -1,3 +1,11 @@
+## Disclaimer
+
+This repository documents lifecycle and memory ownership behavior.
+It does not claim a universal security vulnerability, privilege escalation,
+or SELinux bypass.
+
+---
+
 # Android DMA-BUF / KGSL Lifecycle Research
 
 A defensive study of Android GPU shared-memory lifecycle behavior across
