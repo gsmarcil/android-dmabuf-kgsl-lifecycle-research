@@ -1,0 +1,281 @@
+# Android DMA-BUF / KGSL Lifecycle Security Research
+
+## Whitepaper (PDF Content Ready)
+
+**Author:** gsmarcil
+**Year:** 2026
+**Type:** Defensive Security Research
+**Platform:** Android / Linux Kernel Graphics Stack
+
+---
+
+# Executive Summary
+
+This whitepaper presents research into Android GPU shared-memory behavior involving **DMA-BUF** and **KGSL** memory management mechanisms.
+
+The study focuses on lifecycle behavior, ownership transfer, cross-process delegation, and cleanup semantics within the Android graphics pipeline.
+
+Testing on real Android devices confirmed that trusted system components and user applications may simultaneously reference shared GPU buffers during normal operation. In tested scenarios, buffers could persist after client process termination, while dependency on core graphics services produced asymmetric cleanup behavior.
+
+This paper does **not** claim privilege escalation, sandbox escape, or SELinux bypass. Instead, it documents architectural behavior relevant to hardening and security review.
+
+---
+
+# 1. Background
+
+Modern Android systems use shared graphics buffers for performance and low-latency rendering.
+
+Common participants include:
+
+* SurfaceFlinger
+* System UI
+* Launchers
+* Applications
+* Vendor GPU drivers
+* Hardware abstraction layers (HALs)
+
+To avoid expensive memory copies, Android commonly uses:
+
+* DMA-BUF
+* ION / DMA-HEAP (varies by version)
+* KGSL (Qualcomm GPU memory manager)
+* Binder handle passing
+* Fence synchronization
+
+These mechanisms are legitimate and essential for responsive graphics.
+
+---
+
+# 2. Research Goals
+
+The research aimed to answer:
+
+1. Which processes hold DMA-BUF handles in production systems?
+2. Are buffers shared across different trust domains?
+3. What happens when a client process dies?
+4. What happens when a producer service dies?
+5. Are ownership and revocation semantics always intuitive?
+6. Can stale references remain longer than expected?
+
+---
+
+# 3. Test Environment
+
+| Device        | Android    | Kernel | GPU Stack     |
+| ------------- | ---------- | ------ | ------------- |
+| OnePlus 8T    | Android 14 | 4.19   | KGSL          |
+| Honor MTN-NX1 | Android 16 | 6.1    | Vendor Driver |
+
+SELinux was enforcing on tested systems.
+
+---
+
+# 4. Methodology
+
+The following methods were used:
+
+## Process Enumeration
+
+Reviewed:
+
+* `/proc/<pid>/fd`
+* `/proc/<pid>/attr/current`
+* `/proc/<pid>/cmdline`
+
+To identify:
+
+* DMA-BUF users
+* KGSL users
+* SELinux domains
+* Shared inode references
+
+## Correlation Analysis
+
+Compared inode references between:
+
+* SurfaceFlinger
+* SystemUI
+* Launcher
+* User applications
+
+## Lifecycle Testing
+
+Observed behavior after:
+
+* App termination
+* Graphics-service restart
+* Buffer owner death
+* Client death
+
+---
+
+# 5. Key Findings
+
+## 5.1 Shared Buffers Across Domains
+
+Shared DMA-BUF references were observed between trusted services and applications.
+
+This indicates expected production delegation paths for graphics rendering.
+
+## 5.2 Lifecycle Asymmetry
+
+When some client applications terminated, core services could retain shared buffers.
+
+When critical graphics services restarted, dependent applications often lost access or were restarted.
+
+This suggests asymmetrical ownership relationships.
+
+## 5.3 Ownership Complexity
+
+Buffer lifetime was not always equivalent to process lifetime.
+
+In some scenarios:
+
+* producer survives client
+* client depends on producer
+* references exist across multiple participants
+
+## 5.4 Revocation Assumptions Need Care
+
+Security assumptions based purely on process exit may be incomplete when shared memory is involved.
+
+---
+
+# 6. Security Relevance
+
+These findings matter because complex ownership models may create:
+
+* residual references
+* stale mappings
+* delayed cleanup windows
+* unclear trust boundaries
+* implementation-specific persistence
+
+This does **not** automatically mean vulnerability.
+
+Impact depends on:
+
+* driver implementation
+* kernel version
+* memory permissions
+* synchronization behavior
+* access model
+* SELinux policy
+* vendor hardening
+
+---
+
+# 7. What This Research Does NOT Claim
+
+This project does **not** claim:
+
+* root exploit
+* sandbox escape
+* arbitrary code execution
+* universal vulnerability
+* SELinux bypass
+* guaranteed exploitability
+
+The work is observational and defensive.
+
+---
+
+# 8. Recommendations
+
+## For Android Vendors
+
+Review:
+
+* DMA-BUF cleanup semantics
+* buffer reference counting
+* producer/client teardown logic
+* stale mapping invalidation
+* service restart behavior
+* cross-domain graphics assumptions
+
+## For Security Teams
+
+Add testing for:
+
+* memory lifecycle edges
+* graphics trust boundaries
+* shared buffer ownership confusion
+* race conditions during teardown
+
+## For Researchers
+
+Compare behavior across:
+
+* Adreno
+* Mali
+* PowerVR
+* Tensor
+* Exynos
+* MediaTek
+
+---
+
+# 9. Future Work
+
+Recommended next steps:
+
+1. Binder graphics transaction tracing
+2. Fence synchronization edge cases
+3. Per-driver comparison study
+4. Crash/restart cleanup analysis
+5. Multi-user profile isolation tests
+
+---
+
+# 10. Conclusion
+
+Android graphics pipelines rely on memory sharing for performance.
+
+That model is normal and necessary.
+
+However, security depends not only on how memory is shared, but also on:
+
+* who owns it
+* who can retain it
+* when it is revoked
+* how teardown occurs
+
+Lifecycle semantics deserve the same scrutiny as allocation semantics.
+
+---
+
+# Appendix A – Example Observations
+
+```text
+SurfaceFlinger shares DMA-BUF references with apps
+Client death does not always imply immediate buffer destruction
+Service death may revoke dependent access
+Shared inodes visible across SELinux domains
+```
+
+---
+
+# Appendix B – Repository
+
+GitHub Repository:
+
+android-dmabuf-kgsl-lifecycle-research
+
+---
+
+# Disclosure Statement
+
+This document is intended for:
+
+* platform hardening
+* defensive review
+* academic analysis
+* vendor engineering
+
+No offensive use is endorsed.
+
+---
+
+# License
+
+MIT License
