@@ -1,14 +1,14 @@
-CC=clang
-CFLAGS=-O2 -Wall -I.
-TOOLS=delegation_scan delegation_scan2 lifecycle_test \
-      persistence_test shared_inode_scan process_matrix_scan
+CC=gcc
+CFLAGS=-O2 -Wall
+
+TOOLS=delegation_scan delegation_scan2 shared_inode_scan lifecycle_test persistence_test process_matrix_scan
 
 all: $(TOOLS)
 
 %: tools/%.c
-	$(CC) $(CFLAGS) -o tools/$@ $<
+	$(CC) $(CFLAGS) -o tools/$@ tools/$<
 
 clean:
-	rm -f $(addprefix tools/,$(TOOLS))
+	rm -f tools/delegation_scan tools/delegation_scan2 tools/shared_inode_scan tools/lifecycle_test tools/persistence_test tools/process_matrix_scan
 
 .PHONY: all clean
