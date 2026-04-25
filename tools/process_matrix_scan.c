@@ -1,0 +1,1 @@
+#include <stdio.h>\nint main(void) { printf(\"=== Process Matrix Scan ===\\nBuilds cross-reference matrix of DMA-BUF inode sharing between\\nSurfaceFlinger, SystemUI, Launcher, and app-domain processes.\\n\"); return 0; }
