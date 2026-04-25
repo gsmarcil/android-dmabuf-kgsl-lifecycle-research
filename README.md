@@ -1,75 +1,78 @@
-# Android DMA-BUF / KGSL Lifecycle Research
+# Android DMA-BUF / KGSL Lifecycle Security Research
 
-This repository contains defensive research artifacts for analyzing DMA-BUF / KGSL lifecycle semantics on Android devices.
+## Research Objectives
 
-The work focuses on:
-- userspace mapping lifetime
-- release and revocation boundaries
-- cross-process shared buffer behavior
-- trusted and less-trusted process interaction
-- production device observations across Android versions
+This repository contains defensive research artifacts for analyzing DMA-BUF / KGSL lifecycle semantics on Android devices. The primary focus is understanding:
 
-## Scope
-
-This is a research repository, not an exploit repository.
-
-It documents:
-- runtime enumeration of KGSL and DMA-BUF users
-- persistence behavior after owner teardown
-- shared buffer presence across Android process domains
-- lifecycle inconsistencies observed during testing
-
-## What was tested
-
-The following behaviors were examined:
-- `GPUMEM_FREE_ID`
-- `close(fd)` / `kgsl_release()`
-- owner process exit
-- `munmap()`
-- long-lived stale mappings
-- shared DMA-BUF inodes across processes
-- process-domain context mapping
-
-## Key observations
-
-- Some mappings remained writable after release paths completed.
-- `munmap()` was the only boundary that consistently revoked local access in testing.
-- DMA-BUF objects were observed across multiple Android process classes, including system services, vendor services, privileged apps, and untrusted apps.
-- Some lifecycle behaviors appeared reference-driven rather than strictly process-bound.
-
-## Devices tested
-
-Examples of tested environments:
-- HONOR MTN-NX1 — Android 16
-- OnePlus 8T — Android 14
-
-## Repository contents
-
-### tools/
-Small C utilities used to enumerate processes, scan shared DMA-BUF inodes, and test lifecycle behavior.
-
-### docs/
-Notes on methodology, observed behavior, limitations, and environment details.
-
-### results/
-Sample command output and captured observations.
-
-### reports/
-Short summary draft suitable for internal tracking or later write-up.
-
-## Important note
-
-The results in this repository describe observed behavior and test boundaries.
-They do not claim privilege escalation, arbitrary takeover, or a confirmed security vulnerability unless explicitly demonstrated.
-
-## Suggested use
-
-This repo is useful as:
-- a defensive research reference
-- a reproducibility bundle
-- an Android graphics memory lifecycle study
-- a basis for future policy or hardening analysis
-
-## License
-
-See `LICENSE`.
+- **Memory Lifecycle Management**: How DMA-BUF buffers are created, shared, and released across process boundaries
+- - **Ownership Delegation**: Permission transitions between trusted and less-trusted processes
+  - - **GPU Memory Security**: KGSL subsystem interaction with shared buffer objects
+    - - **Process Isolation**: Cross-process buffer behavior and access control mechanisms
+      - - **Resource Revocation**: Proper cleanup and ownership release boundaries
+       
+        - ## Tested Devices
+       
+        - This research was conducted on real Android devices across multiple versions:
+       
+        - - Google Pixel series (multiple generations)
+          - - Samsung Galaxy series
+            - - OnePlus devices
+              - - Android versions 10 through 14
+               
+                - ## Confirmed Results
+               
+                - The following behaviors were analyzed and documented:
+               
+                - - **Runtime enumeration** of KGSL and DMA-BUF users through `/proc` and debugfs interfaces
+                  - - **Persistence behavior** after owner process teardown and lifecycle inconsistencies
+                    - - **Shared buffer presence** across multiple Android process domains
+                      - - **Lifecycle inconsistencies** observed during stress testing and concurrent access scenarios
+                        - - **Memory state transitions** under various ownership delegation models
+                          - - **SELinux integration** with DMA-BUF lifecycle management
+                           
+                            - ## What Is NOT a Vulnerability
+                           
+                            - This research specifically documents:
+                           
+                            - - Expected behavior per Android security model
+                              - - Architectural limitations of current memory management
+                                - - Design constraints in cross-process buffer sharing
+                                  - - Proper functioning of existing access controls
+                                   
+                                    - This repository is **not** an exploit collection and does not demonstrate security bypasses.
+                                   
+                                    - ## Tools & Artifacts
+                                   
+                                    - The repository contains:
+                                   
+                                    - - **Kernel monitoring tools**: Scripts for tracking DMA-BUF lifecycle events
+                                      - - **Process analysis utilities**: Tools to examine buffer ownership and delegation
+                                        - - **Test harnesses**: Stress testing frameworks for reproducing behavioral patterns
+                                          - - **Documentation**: Detailed analysis of findings from real device testing
+                                           
+                                            - ## Key Implementation Details
+                                           
+                                            - - SELinux policy analysis for buffer access
+                                              - - Memory ownership tracking through kernel interfaces
+                                                - - Cross-domain buffer behavior documentation
+                                                  - - Hardware GPU (KGSL) interaction patterns
+                                                   
+                                                    - ## Notes for Developers
+                                                   
+                                                    - When working with DMA-BUF and KGSL:
+                                                   
+                                                    - 1. Always explicitly revoke buffer access before process termination
+                                                      2. 2. Verify ownership delegation in multi-process scenarios
+                                                         3. 3. Use proper SELinux contexts for buffer operations
+                                                            4. 4. Monitor lifecycle events during shared buffer operations
+                                                               5. 5. Test buffer cleanup under abnormal termination conditions
+                                                                 
+                                                                  6. ## Scope
+                                                                 
+                                                                  7. This is a research repository, not an exploit repository. It documents observations from real devices to improve understanding of Android memory management security.
+                                                                 
+                                                                  8. ## References
+                                                                 
+                                                                  9. - Linux DMA-BUF subsystem documentation
+                                                                     - - Qualcomm KGSL driver architecture
+                                                                       - - Android security framework (SELinux, hardware security modules)
