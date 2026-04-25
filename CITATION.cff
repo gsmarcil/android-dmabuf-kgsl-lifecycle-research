@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+title: Android DMA-BUF / KGSL Lifecycle Security Research
+message: If you use this research, please cite it using the metadata below.
+type: software
+authors:
+  - family-names: Marcil
+    given-names: Gsmarcil
+repository-code: https://github.com/gsmarcil/android-dmabuf-kgsl-lifecycle-research
+url: https://github.com/gsmarcil/android-dmabuf-kgsl-lifecycle-research
+abstract: >
+  Research into Android DMA-BUF and KGSL memory lifecycle behavior,
+  ownership delegation, process sharing, and revocation semantics.
+license: MIT
+keywords:
+  - android
+  - dmabuf
+  - kgsl
+  - gpu
+  - security
+  - kernel
