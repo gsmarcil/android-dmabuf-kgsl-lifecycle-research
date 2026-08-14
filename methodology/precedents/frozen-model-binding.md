@@ -27,15 +27,59 @@ RECORDED ONLY      build / checkpatch / apply results from the campaign,
 ## Rule
 
 ```
-Once a discriminating model has admitted an implementation property, a
-later patch MUST remain inside that model's admitted equivalence class.
+A frozen model binds an implementation ONLY over the domain, reference
+path, and property it explicitly declared.
 
-BUILD success, checkpatch success, prior-art similarity, and
-implementation convenience cannot override a model mismatch.
+Model(reference = A, property = P) does not authorize any claim about
+reference = B merely because A and B occur in the same function.
 
-If implementation and frozen model disagree:
-    the implementation loses by default.
+Within its declared domain:
+  BUILD success, checkpatch success, prior-art similarity, and
+  implementation convenience cannot override a model mismatch.
+  If implementation and frozen model disagree, the implementation
+  loses by default.
+
+Outside it, the model is silent, and silence is not consent.
 ```
+
+For each changed path, one relation must be declared:
+
+```
+PRESERVE(reference, property)         the fix must NOT differ
+CORRECT(reference, oracle)            the fix MUST differ, and must
+                                      satisfy an independent oracle
+INTENTIONALLY_DIVERGE(reference,      the fix MUST differ, reason
+                      reason, oracle)  recorded
+
+differs under PRESERVE                      -> FAIL
+does NOT differ under CORRECT / DIVERGE     -> FAIL
+```
+
+Both directions are failures. **Equivalence is not always the target.**
+A patch that faithfully reproduces a defective reference passes an
+equivalence check and fails its real obligation — and an
+equivalence-only gate cannot even express that it failed.
+
+### Discharge record — this rule's own first version
+
+The rule above supersedes the first version, which read "a later patch
+MUST remain inside that model's admitted equivalence class" with no
+domain qualifier. That is a legitimate discharge, not the forbidden
+edit, and the distinction is worth keeping visible:
+
+```
+DISCHARGED   the modeled PROPERTY was incomplete, shown by evidence
+             obtained independently of any implementation: reading
+             mainline established that the reference *(u32 *)src
+             describes one of the three sites the series changes, and
+             that a second site has no u32 load at all
+NOT the      no implementation failed the old rule and was rescued by
+forbidden    rewriting it. The old rule's verdicts all stand; it was
+edit         too narrow in DOMAIN, not too strict in judgment
+```
+
+The replacement is itself discriminating: it can fail a patch in two
+directions where the old one could fail it in only one.
 
 ## Discharge condition
 
@@ -275,24 +319,38 @@ The model's reference is `*(u32 *)src`. That is one of the three sites
 the series changes, and the first version of this entry stated the
 preservation target as though it were all of them.
 
+The one function `dwc2_hc_write_packet()` needs **two** relations, not
+one, because its two branches are two different algorithms:
+
 ```
-COVERED        gadget.c dwc2_writel_rep, and hcd.c's ALIGNED branch:
-               the change is equivalence-preserving, and the model
-               proves it
+ALIGNED path      PRESERVE(*(u32 *)src, representation)
+                  covered by the frozen model, 0 mismatches
 
-NOT COVERED    hcd.c's UNALIGNED branch. data_buf is u32 *, so
-               data_buf[1] is +4 bytes: mainline reads four whole words,
-               shifts them as if they were bytes, and advances by one.
-               There is no u32 load there to preserve. The series
-               replaces it, deliberately NOT equivalently — a fix, not a
-               preservation
+UNALIGNED path    CORRECT(old_unaligned, byte-contract oracle)
+                  data_buf is u32 *, so data_buf[1..3] are +4, +8, +12
+                  BYTES. Mainline reads four whole words, shifts them as
+                  if they were bytes, and advances by one. There is no
+                  u32 load to preserve.
+                  32/32 cases differ — under CORRECT that is the PASS
+                  condition, not a defect, provided an independent
+                  oracle establishes the new form is byte-correct
+```
 
-NOT COVERED    the RX helper, which carries the same property in the
-               opposite direction and had no instrument at all
+Read the 32/32 correctly. Under an equivalence framing it looks like the
+patch failing; under the declared relation it is the patch discharging an
+obligation it was required to discharge.
 
-NOT COVERED    removing DIV_ROUND_UP also changed the units of the
-               to_write >= can_write return, which an IRQ loop branches
-               on. Entirely outside the modelled property
+Two further domains, both outside the frozen model:
+
+```
+RX helper         PRESERVE(whole-u32 store, representation)
+                  plus CORRECT(destination bound). Frozen separately —
+                  a TX result grants RX nothing
+
+return units      removing DIV_ROUND_UP also changed the units of the
+                  to_write >= can_write comparison, which an IRQ loop
+                  branches on. A CONTROL FLOW axis, not a representation
+                  property. No model of representation can see it
 ```
 
 The gaps are covered by a second instrument, not by extending this one.
@@ -301,16 +359,40 @@ forbids, and the prohibition does not weaken because the extension would
 have been made in good faith. A model is frozen against its author too.
 
 ```
-patch vs aligned reference : 0 mismatches
-unaligned vs reference     : 32 of 32 cases differ
-RX memcpy / RX shift form  : 0 / 4 mismatches
-over-read past a 5-byte payload:  aligned +3, unaligned +15, patch +0
+PRESERVE, aligned TX       0 mismatches
+CORRECT,  unaligned TX     32/32 differ        required, not a defect
+PRESERVE, RX representation 0 mismatches, shift form fails on BE
+CORRECT,  RX bound         candidate == copy_bytes in all cases;
+                           an "unfixed" control that still matches the
+                           reference is REJECTED, which is what makes
+                           the CORRECT direction real rather than
+                           decorative
 ```
 
 The lesson this adds to the two above: an equivalence result inherits
 the scope of its reference. Green from a discriminating model is a
 statement about the sites the reference describes, and about nothing
 else the same patch happens to touch.
+
+### The axis the whole entry nearly missed
+
+Domain is not only *which site*. It is also *which axis*. For every
+changed expression:
+
+```
+MEMORY EFFECT          changed / preserved
+VALUE REPRESENTATION   changed / preserved
+CONTROL FLOW           changed / preserved
+ACCOUNTING             changed / preserved
+BUS TRANSACTION COUNT  changed / preserved
+```
+
+Every changed cell needs a preservation model or a correction oracle.
+Removing a rounding step because the helper now takes bytes is a MEMORY
+EFFECT change — and because the same variable still fed a comparison, a
+CONTROL FLOW change as well. The matrix surfaces that in one line; a
+representation model never can, however discriminating it is, because
+control flow is not in its domain.
 
 ## Classification
 

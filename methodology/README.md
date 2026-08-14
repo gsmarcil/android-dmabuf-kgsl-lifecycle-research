@@ -141,17 +141,39 @@ Appended to the `S0…S7` static-first ladder in
 `references/source-audit.md`:
 
 ```
-S8  does the PROPOSED FIX stay inside the equivalence class the
-    model admitted?                              (minutes, reruns S5)
+S8  for EACH changed path, does the fix satisfy the relation
+    declared for that path?                      (minutes, reruns S5)
 ```
 
-> S8 runs on every revision of the patch, not once. The S5 model is
-> frozen when it first discriminates, and every later revision is judged
-> against that frozen model — including revisions that build clean, pass
-> checkpatch, and copy a construction from another in-tree driver. A
-> revision that fails S8 loses; the model is superseded only by new
-> evidence that the modeled property was itself wrong, never by editing
-> it until the revision passes.
+S8 is not one equivalence check. A frozen model binds only over the
+domain, reference path and property it declared, so each changed path
+declares one relation:
+
+```
+PRESERVE(reference, property)        the fix must NOT differ
+CORRECT(reference, oracle)           the fix MUST differ, and must
+                                     satisfy an independent oracle
+INTENTIONALLY_DIVERGE(...)           the fix MUST differ, reason recorded
+
+differs under PRESERVE                     -> FAIL
+does NOT differ under CORRECT / DIVERGE    -> FAIL
+```
+
+Both directions fail. A patch that faithfully reproduces a defective
+reference passes an equivalence check and fails its real obligation —
+which an equivalence-only gate cannot express. Equivalence is not always
+the target.
+
+S8 also carries a review matrix, because domain is not only *which
+site* but *which axis*:
+
+```
+MEMORY EFFECT / VALUE REPRESENTATION / CONTROL FLOW /
+ACCOUNTING / BUS TRANSACTION COUNT      changed or preserved
+```
+
+Every changed cell needs a preservation model or a correction oracle. A
+green build says nothing about any of the five.
 
 ---
 
