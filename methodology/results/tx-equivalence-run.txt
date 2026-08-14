@@ -1,0 +1,22 @@
+=== DWC2 TX helper: patch/model equivalence ===
+reference = original *(u32 *)src, masked to n valid bytes
+
+host n   off  reference    memcpy       shift        memcpy   shift
+LE   1   0    0x00000001   0x00000001   0x00000001   ok       ok
+LE   2   0    0x00000201   0x00000201   0x00000201   ok       ok
+LE   3   0    0x00030201   0x00030201   0x00030201   ok       ok
+LE   4   0    0x04030201   0x04030201   0x04030201   ok       ok
+BE   1   0    0x01000000   0x01000000   0x00000001   ok       MISMATCH
+BE   2   0    0x01020000   0x01020000   0x00000201   ok       MISMATCH
+BE   3   0    0x01020300   0x01020300   0x00030201   ok       MISMATCH
+BE   4   0    0x01020304   0x01020304   0x04030201   ok       MISMATCH
+
+cases swept                : 32 (host order x offset x n)
+memcpy form mismatches     : 0
+shift  form mismatches     : 16
+
+liveness: the shift form must fail, or this model cannot
+discriminate. shift mismatches > 0 -> discriminating
+
+verdict: PASS — the series form preserves representation on
+both byte orders; the rejected form does not.
