@@ -57,6 +57,18 @@ exactly that.
 
 ---
 
+## Re-audit
+
+`AUDIT.md` is a second pass over the same inputs, checked against
+mainline source rather than against the diff's description of itself. It
+found five things, two material: the frozen model's reference covers one
+of the three call sites the series changes, and removing `DIV_ROUND_UP`
+also changed the units of a return value that a TX-FIFO-empty IRQ loop
+branches on. The precedent entry has been corrected; the frozen model
+has not been touched.
+
+---
+
 ## Evidence, re-verified
 
 Both artifacts here were regenerated in the session that wrote the
@@ -84,6 +96,21 @@ The `renesas_usb3` construction quoted in the entry was also fetched from
 source and pinned by content hash — the GitHub API is blocked in this
 environment, so no commit SHA was obtainable. Re-fetch and compare the
 hash before reusing the citation.
+
+### `model/dwc2-coverage-gap-model.c` → `results/coverage-gap-run.txt`
+
+A second instrument, covering what the frozen model does not: `hcd.c`'s
+unaligned TX branch and the RX helper. It exists as a separate file
+rather than as an extension of the frozen model because extending a
+frozen model to reach what it missed is exactly the edit the precedent
+forbids.
+
+```
+patch vs aligned reference : 0 mismatches
+unaligned vs reference     : 32 of 32 cases differ
+RX memcpy / RX shift form  : 0 / 4 mismatches
+over-read past a 5-byte payload:  aligned +3, unaligned +15, patch +0
+```
 
 ### `results/validator-liveness.txt`
 

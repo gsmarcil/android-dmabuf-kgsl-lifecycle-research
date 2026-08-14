@@ -193,6 +193,11 @@ dwc2 original  loaded an object REPRESENTATION from memory and passed it
                representation
 ```
 
+That second line is true of the aligned load, which is what the model
+references. It is not true of every site the series touches — see
+**Model scope** below, where writing it without that qualification is
+recorded as a defect of this entry.
+
 Note what the citation had to step over to be usable at all. Inside the
 same function, renesas_usb3 pushes its whole words with `iowrite32_rep`,
 which forwards the memory representation, and its tail with a
@@ -264,6 +269,49 @@ zero mismatches everywhere would be declared `MODEL IS BLIND` rather than
 clean. That is what makes the 0 in the memcpy column mean anything —
 see `null-result-requires-liveness-control`.
 
+## Model scope — added on re-audit
+
+The model's reference is `*(u32 *)src`. That is one of the three sites
+the series changes, and the first version of this entry stated the
+preservation target as though it were all of them.
+
+```
+COVERED        gadget.c dwc2_writel_rep, and hcd.c's ALIGNED branch:
+               the change is equivalence-preserving, and the model
+               proves it
+
+NOT COVERED    hcd.c's UNALIGNED branch. data_buf is u32 *, so
+               data_buf[1] is +4 bytes: mainline reads four whole words,
+               shifts them as if they were bytes, and advances by one.
+               There is no u32 load there to preserve. The series
+               replaces it, deliberately NOT equivalently — a fix, not a
+               preservation
+
+NOT COVERED    the RX helper, which carries the same property in the
+               opposite direction and had no instrument at all
+
+NOT COVERED    removing DIV_ROUND_UP also changed the units of the
+               to_write >= can_write return, which an IRQ loop branches
+               on. Entirely outside the modelled property
+```
+
+The gaps are covered by a second instrument, not by extending this one.
+Extending a frozen model to reach what it missed is the edit this entry
+forbids, and the prohibition does not weaken because the extension would
+have been made in good faith. A model is frozen against its author too.
+
+```
+patch vs aligned reference : 0 mismatches
+unaligned vs reference     : 32 of 32 cases differ
+RX memcpy / RX shift form  : 0 / 4 mismatches
+over-read past a 5-byte payload:  aligned +3, unaligned +15, patch +0
+```
+
+The lesson this adds to the two above: an equivalence result inherits
+the scope of its reference. Green from a discriminating model is a
+statement about the sites the reference describes, and about nothing
+else the same patch happens to touch.
+
 ## Classification
 
 ```
@@ -277,7 +325,9 @@ related    null-result-requires-liveness-control — there the instrument
            to be silenced
 related    scope-precedes-rigor — there every gate passed inside a
            boundary no gate examined; here every signal passed inside an
-           authority no signal examined
+           authority no signal examined. Recurs INSIDE this entry: the
+           model's reference covered one of three changed sites, and the
+           first draft claimed all three. See Model scope
 related    claim-promotion-requires-boundary-proof — there the claim
            exceeded the artifact; here the artifact contradicted a prior
            artifact and the contradiction was nearly resolved in favour
