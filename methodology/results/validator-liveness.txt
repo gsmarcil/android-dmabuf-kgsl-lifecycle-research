@@ -1,0 +1,22 @@
+--- CONTROL 0 — unmutated copy (known-good must stay admissible)
+[PASS] skill structure and canonical contracts validated
+exit=0
+
+--- CONTROL 1 — entry written but never indexed
+[FAIL] precedent entry not indexed: planted-control.md
+[FAIL] precedent index claims 4 real entries, 5 on disk
+exit=1
+
+--- CONTROL 2 — index links an entry that does not exist
+[FAIL] precedent entry not indexed: scope-precedes-rigor.md
+[FAIL] index links a precedent that does not exist: deleted-entry.md
+exit=1
+
+--- CONTROL 3 — stats disagree with entries on disk
+[FAIL] precedent index claims 9 real entries, 4 on disk
+exit=1
+
+--- CONTROL 4 — indexed entry is empty
+[FAIL] empty precedent entry: frozen-model-binding.md
+exit=1
+

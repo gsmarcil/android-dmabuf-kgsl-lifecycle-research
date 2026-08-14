@@ -60,10 +60,11 @@ Additional devices are encouraged for comparison.
 ## Repository Structure
 
 ```text id="p4v0wu"
-tools/      C research utilities and scanners
-docs/       Methodology, findings, matrices, limitations
-results/    Sample outputs and notes
-reports/    Whitepaper and disclosure drafts
+tools/       C research utilities and scanners
+docs/        Methodology, findings, matrices, limitations
+results/     Sample outputs and notes
+reports/     Whitepaper and disclosure drafts
+methodology/ Cross-campaign research precedents and their verifiers
 ```
 
 ---
