@@ -14,9 +14,11 @@ H-H3b cases with zero excess : 0   (must be 0 — the defect
 B where the two laws agree   : 0   (must be 0, else the
                                      instrument conflates them)
 patch touching past B        : 0   (must be 0)
+corollary EXCESS(b)-EXCESS(a) != 12 : 0   (must be 0)
 
 SOURCE_SPAN(H-H3a) = 4*ceil(B/4)
 SOURCE_SPAN(H-H3b) = 4*ceil(B/4) + 12
+EXCESS(H-H3b, B)   = EXCESS(H-H3a, B) + 12   for all B >= 1
 
 verdict: PASS — two distinct defects. H-H3a is a tail
 over-read conditional on B % 4 != 0; H-H3b is a

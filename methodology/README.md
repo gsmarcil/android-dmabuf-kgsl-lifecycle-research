@@ -2,9 +2,10 @@
 
 This directory is not Android research. It is the durable copy of a
 change made to the `loop-engineering` skill, which lives outside any
-repository (`~/.claude/skills/synced/loop-engineering/`) and is therefore
-lost when a session container is reclaimed. The skill was updated live
-and mirrored here so the work survives.
+repository (under `~/.claude/skills/synced/`, at a path containing a
+session UUID) and is therefore lost when a session container is
+reclaimed. The skill is updated live and mirrored here so the work
+survives. It has already been reclaimed once; see **Reinstalling**.
 
 The subject is a lesson from the DWC2 PIO campaign, kept because it
 generalises well past that driver: **a patch can be green on every
@@ -17,21 +18,21 @@ see it is the instrument most likely to be edited away.**
 
 | File | Change |
 |---|---|
-| `precedents/frozen-model-binding.md` | New. One entry, two rules. |
-| `precedents/_index.md` | Three inverted indexes updated; stats 3 → 4 real entries. |
-| `references/source-audit.md` | New gate `S8` appended to the static-first ladder. |
+| `precedents/frozen-model-binding.md` | New. One entry, three rules. |
+| `precedents/_index.md` | Three inverted indexes updated; stats 3 → 4 real entries, three defect classes. |
+| `references/source-audit.md` | New gate `S8`: domain binding, review matrix, attribution obligation, span-is-not-effect. |
 | `scripts/validate_skill.sh` | New precedent-library integrity checks. |
-| `CHANGELOG.md` | `v4 — authority layer`. |
+| `SKILL.md` | Three closure contracts. |
+| `CHANGELOG.md` | `v4` authority layer, `v5` domain binding, `v6` obligation edges. |
 
-`source-audit.md` and `CHANGELOG.md` are not mirrored whole here; the
-`S8` addition is reproduced below, and the changelog entry describes the
-rest.
+Everything except `SKILL.md` is mirrored whole. For `SKILL.md` only the
+changed block is kept, in `references/SKILL-closure-contracts.txt`.
 
 ---
 
 ## The entry
 
-`precedents/frozen-model-binding.md` carries two rules in one file:
+`precedents/frozen-model-binding.md` carries three rules in one file:
 
 ```
 frozen-model binding      once a discriminating model has admitted an
@@ -46,9 +47,14 @@ prior-art non-authority   a sibling implementation is evidence for a
                           Prior art generates hypotheses; the reference
                           implementation defines the preservation target;
                           the discriminating model judges candidates.
+
+attribution obligation    knowing a finding and being obliged to apply
+                          it are different. Every axis a patch changes
+                          must name the finding or intent that
+                          authorizes it, or review is INCOMPLETE.
 ```
 
-They are one entry, not two, because they failed together on one
+They are one entry, not three, because they failed together on one
 fixture. `renesas_usb3`'s partial-word construction was promoted from
 hypothesis source to oracle, and the frozen model that contradicted it
 was then nearly rewritten to agree with it. The second failure is what
@@ -59,13 +65,22 @@ exactly that.
 
 ## Re-audit
 
-`AUDIT.md` is a second pass over the same inputs, checked against
-mainline source rather than against the diff's description of itself. It
-found five things, two material: the frozen model's reference covers one
-of the three call sites the series changes, and removing `DIV_ROUND_UP`
-also changed the units of a return value that a TX-FIFO-empty IRQ loop
-branches on. The precedent entry has been corrected; the frozen model
-has not been touched.
+`AUDIT.md` is the re-audit, checked against mainline source rather than
+against the diff's description of itself, and revised across four
+rounds. It found five things, two material: the frozen model's reference
+covers one of the three call sites the series changes, and removing
+`DIV_ROUND_UP` also changed the units of a return value that a
+TX-FIFO-empty IRQ loop branches on.
+
+Two of its findings are corrections to the report itself. F2 was first
+written as something the campaign had never examined; in fact D7 had
+modelled it, which makes it an attribution failure rather than a
+coverage one. F5 was first written as a "12-15 byte OOB read", which
+promotes a source-span measurement to a memory-safety verdict without
+binding the allocation.
+
+The precedent entry has been corrected in step. The frozen model has not
+been touched in any round.
 
 ---
 
@@ -175,18 +190,49 @@ ACCOUNTING / BUS TRANSACTION COUNT      changed or preserved
 Every changed cell needs a preservation model or a correction oracle. A
 green build says nothing about any of the five.
 
+And a cell marked `changed` owes a name:
+
+```
+OBLIGATION EDGE
+
+for each axis marked `changed`:
+    there MUST exist a finding ID, requirement ID, or recorded
+    explicit-intent ID that justifies the change
+    absent that -> PATCH_REVIEW = INCOMPLETE
+```
+
+Finally, S8 separates a measured address span from a memory-safety
+verdict. An addressed source span is source-proven; the allocation
+boundary and the forbidden read are further bindings. A wide read window
+is a source-span violation until it is bound to an allocation.
+
 ---
 
 ## Reinstalling into a fresh session
 
+This has already been needed once. A container recycle reset the live
+skill to v3 and everything here had to be restored — at which point the
+mirror turned out to be missing `source-audit.md` and `CHANGELOG.md`,
+which had to be rebuilt by hand from prose. The mirror now carries every
+changed file, so the next restore is a copy.
+
 ```bash
-SKILL=~/.claude/skills/synced/loop-engineering
-cp methodology/precedents/*.md   "$SKILL/precedents/"
-cp methodology/scripts/*.sh      "$SKILL/scripts/"
-# re-apply the S8 block to references/source-audit.md by hand
+SKILL=$(dirname "$(find ~/.claude/skills -name SKILL.md -path '*loop-engineering*' | head -1)")
+
+cp methodology/precedents/*.md        "$SKILL/precedents/"
+cp methodology/scripts/*.sh           "$SKILL/scripts/"
+cp methodology/references/source-audit.md "$SKILL/references/"
+cp methodology/CHANGELOG.md           "$SKILL/CHANGELOG.md"
+chmod +x "$SKILL/scripts/validate_skill.sh"
+
+# SKILL.md is not mirrored whole. Re-apply the last three lines of
+# methodology/references/SKILL-closure-contracts.txt to the matching
+# block in "$SKILL/SKILL.md".
+
 bash "$SKILL/scripts/validate_skill.sh"      # expect [PASS]
 ```
 
-Copying `_index.md` overwrites the index. If the live skill has gained
-entries since this commit, merge rather than copy — and note that the
-validator will now catch the stat drift if you do not.
+The skill path contains a session UUID and changes between containers,
+hence the `find`. Copying `_index.md` overwrites the index: if the live
+skill has gained entries since this commit, merge rather than copy — the
+validator catches the resulting stat drift if you do not.

@@ -19,6 +19,27 @@
  *          EXCESS      = SPAN - B  in {12,13,14,15}
  *          NEVER zero — independent of any partial tail
  *
+ * COROLLARY, added after the closed forms were already verified:
+ *
+ *     EXCESS(H-H3b, B) - EXCESS(H-H3a, B)
+ *       = (4*ceil(B/4) + 12 - B) - (4*ceil(B/4) - B)
+ *       = 12                                    for all B >= 1
+ *
+ * This introduces no new domain, reference, or measurement — it is an
+ * equality over quantities this instrument already computes, so it is
+ * asserted here rather than in a second instrument.
+ *
+ * LAYER DISCIPLINE. What is established below is the ADDRESSED SOURCE
+ * SPAN and nothing further:
+ *
+ *     addressed source span   SOURCE-PROVEN, here
+ *     allocation boundary     needs binding to the real source object
+ *     forbidden read          needs effect/runtime evidence, or a
+ *                             sufficient architectural guarantee
+ *
+ * Do not read "+12..15" as "12-15 byte OOB read". It is a source-span
+ * violation until the span is bound to an allocation.
+ *
  * The spans are measured by index tracking, never read out of bounds,
  * then checked against the closed forms above.
  *
@@ -83,7 +104,7 @@ int main(void)
 {
 	unsigned b, r;
 	int form_bad = 0, h3b_zero_excess = 0, laws_identical = 0;
-	int patch_excess_bad = 0;
+	int patch_excess_bad = 0, identity_bad = 0;
 	unsigned a_by_mod[4] = { 0 }, u_by_mod[4] = { 0 };
 	int seen[4] = { 0 };
 
@@ -103,6 +124,8 @@ int main(void)
 			h3b_zero_excess++;
 		if (ea == eu)
 			laws_identical++;
+		if (eu - ea != 12)
+			identity_bad++;
 		if (sp != b)
 			patch_excess_bad++;
 
@@ -132,11 +155,15 @@ int main(void)
 	printf("patch touching past B        : %d   (must be 0)\n",
 	       patch_excess_bad);
 
+	printf("corollary EXCESS(b)-EXCESS(a) != 12 : %d   (must be 0)\n",
+	       identity_bad);
+
 	printf("\nSOURCE_SPAN(H-H3a) = 4*ceil(B/4)\n");
 	printf("SOURCE_SPAN(H-H3b) = 4*ceil(B/4) + 12\n");
+	printf("EXCESS(H-H3b, B)   = EXCESS(H-H3a, B) + 12   for all B >= 1\n");
 
 	if (form_bad == 0 && h3b_zero_excess == 0 && laws_identical == 0 &&
-	    patch_excess_bad == 0) {
+	    patch_excess_bad == 0 && identity_bad == 0) {
 		printf("\nverdict: PASS — two distinct defects. H-H3a is a tail\n"
 		       "over-read conditional on B %% 4 != 0; H-H3b is a\n"
 		       "wide-source-window defect present at every B.\n");

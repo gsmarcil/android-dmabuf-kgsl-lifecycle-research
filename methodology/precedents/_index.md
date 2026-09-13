@@ -20,7 +20,7 @@ stats. All entries follow `references/redaction-doctrine.md`.
 
 - real entries: 4
 - seed entries: 0
-- last updated: 2026-08-14
+- last updated: 2026-09-13
 
 ---
 
@@ -51,6 +51,9 @@ stats. All entries follow `references/redaction-doctrine.md`.
 - [frozen-model-binding](./frozen-model-binding.md)
 
 ### methodology — evidence-role confusion
+- [frozen-model-binding](./frozen-model-binding.md)
+
+### methodology — knowledge propagation and attribution
 - [frozen-model-binding](./frozen-model-binding.md)
 
 ### tenancy and context isolation

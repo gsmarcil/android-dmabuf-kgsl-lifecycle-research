@@ -8,6 +8,18 @@ Both answers are yes, and the third pass moved the interpretation again.
 The problem was never only in the implementation. It was in how the
 equivalence relation itself was defined.
 
+## Round 4
+
+```
+H-H3b   DEMOTED in layer, not in strength — source-span violation,
+        not an OOB read, until the allocation is bound. Corrects this
+        report's own wording
+F2      converted from a written lesson into an obligation edge
+F3      four-name vocabulary; equalities become properties to prove
+new     corollary EXCESS(H-H3b) = EXCESS(H-H3a) + 12, verified
+new     verification recorded as asymmetric rather than merged
+```
+
 ## What changed in round 3
 
 ```
@@ -155,6 +167,28 @@ commit C — RX byte-safe conversion
 A reviewer can then see that the `irq_fifoempty()` change is intended and
 modelled, rather than an unmentioned side effect of commit B.
 
+### The gate this becomes
+
+The split repairs this instance. The recurrence is prevented only by
+turning the lesson into an edge, which is now in the skill as
+`PATCH_REVIEW_INCOMPLETE`:
+
+```
+OBLIGATION EDGE
+
+for each axis marked `changed` in the review matrix:
+    there MUST exist a finding ID, requirement ID, or recorded
+    explicit-intent ID that justifies the change
+
+    absent that -> PATCH_REVIEW = INCOMPLETE
+```
+
+It has to be an edge rather than a reminder because the failure is not
+ignorance. The knowledge existed, was modelled, and was correct. What did
+not exist was anything obliging the reviewer to look it up. A campaign
+accumulates knowledge faster than it accumulates obligations, and that
+gap is where already-solved defects re-enter.
+
 ---
 
 ## F3 — `req.actual` needs its own gate
@@ -194,6 +228,21 @@ reported == actual             intentionally no longer true on overflow
 That third line is a deliberate contract change and belongs in the commit
 message and in a model — not under the word "defensive", which is what
 the previous version of this report leaned on.
+
+**Naming discipline.** Once `reported != physical effect` holds
+deliberately in some case, the word "actual" outside the field name is
+ambiguous and must not carry an argument. Four distinct names:
+
+```
+req.actual        reported / accounted bytes
+copied_bytes      bytes committed to the destination
+consumed_bytes    bytes consumed or drained from the source / FIFO
+source_span       address range touched on the source side
+```
+
+Every equality between these is a property to be proved, not an implicit
+assumption. The RX change restores `req.actual == copied_bytes` while
+intentionally giving up `req.actual == consumed_bytes`.
 
 ---
 
@@ -273,11 +322,38 @@ H-H3b  unaligned wrong-width indexing / wide-window over-read
 The instrument checks that the two laws never coincide, so it cannot
 conflate the defects it is meant to separate.
 
-Impact, stated carefully: an out-of-bounds **read**, faultable at a page
-boundary and KASAN-reportable. The excess bytes land in the TxFIFO, but
-the core transmits only the programmed packet length, so this is not a
-wire disclosure under normal programming. Do not upgrade it without an
-artifact.
+Corollary, entailed by the two closed forms and asserted by the same
+instrument since it adds no new domain or measurement:
+
+```
+EXCESS(H-H3b, B) = EXCESS(H-H3a, B) + 12     for all B >= 1
+```
+
+So the two laws never coincide at any `B`, and H-H3b retains a 12..15
+byte excess precisely where H-H3a falls to zero. That is the strongest
+available separation of the two defects.
+
+**Layer discipline — correcting this report's own wording.** The
+previous version called this "an out-of-bounds read, faultable at a page
+boundary and KASAN-reportable". That promotes a source-layer measurement
+to a memory-safety verdict without the intervening binding. Keep the
+layers apart:
+
+```
+addressed source span     SOURCE-PROVEN — established here
+allocation boundary       needs binding to the real source object
+actual forbidden read     needs effect/runtime evidence, or a
+                          sufficient architectural guarantee
+```
+
+H-H3b is therefore a **wide-source-window / source-span violation** at
+the source layer. It is not "a 12-15 byte OOB read" until the span is
+bound to the allocation behind `chan->xfer_buf`. Recorded in the skill
+as `UNBOUND_SPAN_CLAIM`.
+
+The FIFO side is unchanged by this: the excess bytes land in the TxFIFO
+and the core transmits only the programmed packet length, so no wire
+disclosure is claimed either.
 
 ---
 
@@ -360,6 +436,31 @@ The other two uploads:
 dwc2-tx-equivalence-model.c  sha256 87eae979156e626a75567972c9b3cf9b5b50b7de1d0d4841339b0d2a9a0c5d86
 frozen-model-binding.md      sha256 50e1102ee25626a6c31a79fda37a8b93d43681aa5c095a750e4c42b931df2711
 ```
+
+### Verification is asymmetric, and the asymmetry is the record
+
+The hashes above were computed in the session that analysed the file.
+A reviewer working from a different tool view cannot recompute them and
+should not inherit the claim. The honest status is split, not merged:
+
+```
+648a33 artifact integrity
+    session-side byte recheck    VERIFIED  (sha256, 196 lines,
+                                 shift = 0, memcpy = 2)
+    internal consistency         PASS
+    reviewer-side byte recheck   NOT AVAILABLE in that tool view
+```
+
+Neither half invalidates rounds 2 and 3; the findings rest on mainline
+source, which any party can re-fetch and hash independently. What the
+split prevents is a reviewer recording "verified" on the strength of
+someone else's arithmetic.
+
+One locator correction, since it is a common source of this confusion:
+these commits are not in a `DWC2` repository and were never pushed to
+one. They live on branch `claude/frozen-model-binding-prior-art-rzfd7l`
+of `gsmarcil/android-dmabuf-kgsl-lifecycle-research`, which is where the
+methodology mirror is kept. A short SHA will not resolve anywhere else.
 
 ## Artifacts
 

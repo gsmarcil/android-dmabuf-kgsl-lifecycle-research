@@ -1,6 +1,7 @@
-# Frozen-model binding, and prior-art non-authority
+# Frozen-model binding, prior-art non-authority,
+# and the attribution obligation
 
-Two rules, one entry. They are recorded together because they failed
+Three rules, one entry. They are recorded together because they failed
 together, on one fixture, in one round: an external driver was promoted
 from hypothesis source to oracle, and the frozen model that contradicted
 it was nearly rewritten until it agreed. Either failure alone is
@@ -270,6 +271,103 @@ other implementations" — that would cost the campaign a real finding.
 
 ---
 
+# 3 — The attribution obligation
+
+## Rule
+
+```
+Knowing a finding and being obliged to apply it are different things.
+A long campaign accumulates knowledge faster than it accumulates
+obligations, and the gap is where known defects re-enter.
+
+For every axis a patch changes, there MUST exist a finding ID,
+requirement ID, or recorded explicit-intent ID that justifies it.
+
+absent that  ->  PATCH_REVIEW = INCOMPLETE
+```
+
+## Discharge condition
+
+```
+DISCHARGED     every changed axis names the finding or intent that
+               authorizes it, and a reader can follow the name to the
+               model that established it
+NOT DISCHARGED the change is correct, the knowledge existed, and no
+               edge in the process required the two to meet
+```
+
+The trap is that this failure looks like success. The patch is right.
+The finding was real. Both were in the campaign. Nothing was missing
+except the edge between them.
+
+## Audit question
+
+```
+fires: on every matrix cell marked `changed`.
+
+  Which finding ID authorizes this change?
+  If I am naming it from memory rather than from the record, the
+  obligation did not exist — I am supplying it after the fact.
+```
+
+## Campaign application
+
+Removing `DIV_ROUND_UP` from `dwc2_hsotg_write_fifo()` was necessary for
+the byte-taking helper. The same variable still fed
+`to_write >= can_write`, so the deletion also changed that comparison
+from words-against-bytes to bytes-against-bytes, and the return is live:
+`write_fifo -> trytx -> irq_fifoempty`, which does `if (ret < 0) break`
+over every IN endpoint.
+
+The campaign had **already modelled this**. D7 covered the unit
+mismatch, the resulting false negative for `-ENOSPC`, and the caller
+consequence including the `break`. So:
+
+```
+DISCOVERY   D7 known and modelled
+PATCH       change silently incorporates the D7 fix
+REVIEW      reviewer does not attribute the delta to D7
+
+failure is not      missing finding
+failure is          KNOWN FINDING  ⇏  PATCH DELTA ATTRIBUTION
+```
+
+This was first written up as "the one thing nothing in the campaign
+looked at". That was wrong, and the correction matters: a missed finding
+is a coverage problem, while this is a process problem, and only the
+second one recurs no matter how much the campaign learns.
+
+## Repair
+
+Not reintroducing the defect to keep behaviour stable. Split the change
+out under its own finding ID:
+
+```
+commit A — fix TX FIFO return-unit comparison   (D7.1 / D7.2 / D7.3)
+commit B — byte-safe TX helper                  (memory / representation)
+commit C — byte-safe RX conversion              (bounds / accounting)
+```
+
+Then the `irq_fifoempty()` change is attributable rather than collateral.
+
+## Related failure of the same shape — span is not effect
+
+The same gap appears when a source-layer measurement is promoted to a
+memory-safety verdict without the intervening bindings:
+
+```
+addressed source span     SOURCE-PROVEN by the model
+allocation boundary       needs binding to the real source object
+actual forbidden read     needs effect/runtime evidence, or a
+                          sufficient architectural guarantee
+```
+
+A `+12..15` byte source window is a **source-span violation**, not a
+"12-15 byte OOB read", until the span is bound to an allocation. The
+first version of this entry's audit made exactly that jump.
+
+---
+
 # Fixture
 
 ## Source pins
@@ -394,11 +492,30 @@ CONTROL FLOW change as well. The matrix surfaces that in one line; a
 representation model never can, however discriminating it is, because
 control flow is not in its domain.
 
+## Naming discipline
+
+Once `reported != physical effect` holds deliberately in some case, the
+word "actual" outside the field name is ambiguous and must not carry an
+argument. Models in this fixture use four distinct names:
+
+```
+req.actual        reported / accounted bytes
+copied_bytes      bytes committed to the destination
+consumed_bytes    bytes consumed or drained from the source / FIFO
+source_span       address range touched on the source side
+```
+
+Every equality between these is a property to be proved, never an
+implicit assumption. The RX change is exactly a case where
+`req.actual == copied_bytes` was restored while `req.actual ==
+consumed_bytes` was intentionally given up.
+
 ## Classification
 
 ```
 class      implementation-model equivalence  (part 1)
            evidence-role confusion           (part 2)
+           knowledge-propagation / attribution (part 3)
 gate       S8 — patch/model equivalence, see references/source-audit.md
 fixture    renesas_usb3 -> dwc2 TX tail, big-endian divergence
 
@@ -424,5 +541,6 @@ technique:     [frozen discriminating model rerun against a later patch,
                 retro-testing a gate against a known historical miss]
 surface:       [the methodology itself, kernel driver source]
 defect_class:  [methodology — implementation-model equivalence,
-                methodology — evidence-role confusion]
+                methodology — evidence-role confusion,
+                methodology — knowledge propagation and attribution]
 ```
