@@ -1,0 +1,21 @@
+=== DWC2 RX helper — declared-domain relation model ===
+reference: *data_buf = dwc2_readl(...)   (whole-u32 store)
+
+R1 PRESERVE(representation)   40 cases
+   memcpy form mismatches   : 0   (must be 0)
+   shift  form mismatches   : 12   (must be > 0, else blind)
+
+R2 CORRECT(destination bound) 2145 cases
+   candidate != copy_bytes  : 0   (must be 0)
+   reference over-writes in : 2128 cases
+   unfixed control accepted : 0   (must be 0 — a candidate
+                                    matching the reference
+                                    FAILS a CORRECT relation)
+
+liveness: R1 needs the shift form to fail, R2 needs the
+reference to over-write somewhere. Both observed -> the
+instrument can separate conforming from non-conforming.
+
+verdict: PASS — RX satisfies PRESERVE on representation
+and CORRECT on the destination bound. Frozen at this
+domain: RX only, these two relations only.

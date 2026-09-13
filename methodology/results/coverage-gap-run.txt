@@ -1,0 +1,25 @@
+=== DWC2: coverage the frozen TX model does not have ===
+
+A. dwc2_hc_write_packet — bytes touched past the payload
+
+host n   aligned  unaligned  patch      note
+LE   5   +3       +15        +0         unaligned != reference
+LE   8   +0       +12        +0         unaligned != reference
+BE   5   +3       +15        +0         unaligned != reference
+BE   8   +0       +12        +0         unaligned != reference
+
+patch vs aligned reference : 0 mismatches  (must be 0)
+unaligned vs reference     : 32 of 32 cases differ  (must be > 0)
+
+B. RX helper — representation preservation, unmodelled until now
+
+memcpy form mismatches     : 0  (must be 0)
+shift  form mismatches     : 4  (must be > 0)
+
+liveness: an instrument that cannot separate the forms is
+blind. unaligned must differ, and the RX shift form must fail.
+
+verdict: PASS — the patch reproduces the ALIGNED branch and
+the RX store, and is deliberately NOT equivalent to the
+unaligned branch, which was defective. The frozen TX model
+covers none of this.
